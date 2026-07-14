@@ -1,0 +1,178 @@
+{
+  "entities": {
+    "client": {
+      "title": "Client Profile",
+      "description": "Details about a corporate client registered on the platform",
+      "type": "object",
+      "properties": {
+        "companyName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Nome da empresa cliente"
+        },
+        "cnpj": {
+          "type": "string",
+          "minLength": 14,
+          "maxLength": 20,
+          "description": "CNPJ da empresa"
+        },
+        "representative": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Nome do responsável técnico ou de contato"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "E-mail cadastrado do cliente"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data de criação do perfil"
+        }
+      },
+      "required": ["companyName", "cnpj", "representative", "email", "createdAt"]
+    },
+    "ticket": {
+      "title": "Support Ticket",
+      "description": "A technical support request raised by a client or worker",
+      "type": "object",
+      "properties": {
+        "companyName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Nome da empresa do chamado"
+        },
+        "employeeName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Nome do funcionário que reportou"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "E-mail de contato para o chamado"
+        },
+        "whatsapp": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 20,
+          "description": "Número do WhatsApp para contato"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Cargo do funcionário"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 2000,
+          "description": "Descrição detalhada do problema"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "urgent"],
+          "description": "Prioridade do chamado"
+        },
+        "anydesk": {
+          "type": "boolean",
+          "description": "Se o usuário já possui ou usa o AnyDesk"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["received", "analyzing", "in_progress", "completed"],
+          "description": "Status atual do chamado"
+        },
+        "response": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Resposta do suporte técnico"
+        },
+        "clientId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "ID do cliente logado, ou vazio se for chamado anônimo/visitante"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de criação"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de atualização"
+        }
+      },
+      "required": [
+        "companyName",
+        "employeeName",
+        "email",
+        "whatsapp",
+        "role",
+        "description",
+        "priority",
+        "anydesk",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "review": {
+      "title": "Customer Review",
+      "description": "A feedback or review submitted by a client",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Nome da pessoa que avaliou"
+        },
+        "companyName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Nome da empresa"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Avaliação de 1 a 5 estrelas"
+        },
+        "comment": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 1000,
+          "description": "Comentário detalhado"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data de criação do feedback"
+        }
+      },
+      "required": ["name", "companyName", "rating", "comment", "createdAt"]
+    }
+  },
+  "firestore": {
+    "clients/{clientId}": {
+      "schema": "client",
+      "description": "Coleção de perfis de clientes corporativos"
+    },
+    "tickets/{ticketId}": {
+      "schema": "ticket",
+      "description": "Coleção de chamados abertos"
+    },
+    "reviews/{reviewId}": {
+      "schema": "review",
+      "description": "Coleção de avaliações enviadas por clientes"
+    }
+  }
+}

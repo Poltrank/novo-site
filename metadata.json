@@ -1,0 +1,6 @@
+{
+  "name": "Suporte Técnico Corporativo",
+  "description": "Plataforma premium de suporte técnico em TI e informática exclusiva para empresas, com painel do cliente, abertura de chamados e painel administrativo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

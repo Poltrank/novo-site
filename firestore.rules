@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloudfire.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net (default-deny catch-all)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      // Allow Google Login (which is always verified) or verified email
+      return request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "cassiomatsuoka@gmail.com" || 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 2. Client Profile Validation & Rules
+    function isValidClient(data) {
+      return data.companyName is string && data.companyName.size() >= 2 && data.companyName.size() <= 100 &&
+             data.cnpj is string && data.cnpj.size() >= 14 && data.cnpj.size() <= 20 &&
+             data.representative is string && data.representative.size() >= 2 && data.representative.size() <= 100 &&
+             data.email is string && data.email.size() <= 150;
+    }
+
+    match /clients/{clientId} {
+      allow get: if isSignedIn() && (request.auth.uid == clientId || isAdmin());
+      // Only admin can list client details to prevent scraping
+      allow list: if isAdmin();
+      
+      allow create: if isSignedIn() && request.auth.uid == clientId && isValidClient(request.resource.data) && request.resource.data.createdAt == request.time;
+      allow update: if isSignedIn() && (
+        (request.auth.uid == clientId && isValidClient(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 3. Ticket Validation & Rules
+    function isValidTicket(data) {
+      return data.companyName is string && data.companyName.size() >= 2 && data.companyName.size() <= 100 &&
+             data.employeeName is string && data.employeeName.size() >= 2 && data.employeeName.size() <= 100 &&
+             data.email is string && data.email.size() <= 150 &&
+             data.whatsapp is string && data.whatsapp.size() >= 8 && data.whatsapp.size() <= 25 &&
+             data.role is string && data.role.size() >= 2 && data.role.size() <= 100 &&
+             data.description is string && data.description.size() >= 10 && data.description.size() <= 2000 &&
+             data.priority in ['low', 'medium', 'high', 'urgent'] &&
+             data.anydesk is bool &&
+             data.status in ['received', 'analyzing', 'in_progress', 'completed'] &&
+             (!('response' in data) || (data.response is string && data.response.size() <= 2000)) &&
+             data.clientId is string && data.clientId.size() <= 128;
+    }
+
+    match /tickets/{ticketId} {
+      allow get: if isSignedIn() && (resource.data.clientId == request.auth.uid || isAdmin());
+      // Prevent blanket client reads. Must query by clientId unless admin.
+      allow list: if isSignedIn() && (resource.data.clientId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() && isValidTicket(request.resource.data) && 
+                    (request.resource.data.clientId == request.auth.uid || request.resource.data.clientId == '') &&
+                    request.resource.data.status == 'received' &&
+                    request.resource.data.createdAt == request.time &&
+                    request.resource.data.updatedAt == request.time;
+
+      allow update: if isSignedIn() && (
+        // Admin can update anything, status, response, etc.
+        isAdmin() ||
+        // Owner can edit details but only if ticket is still in 'received' (non-active) state, and cannot change administrative fields
+        (
+          resource.data.clientId == request.auth.uid &&
+          isValidTicket(request.resource.data) &&
+          resource.data.status == 'received' &&
+          request.resource.data.status == 'received' &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.clientId == resource.data.clientId &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['description', 'priority', 'anydesk', 'updatedAt'])
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // 4. Review Validation & Rules
+    function isValidReview(data) {
+      return data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+             data.companyName is string && data.companyName.size() >= 2 && data.companyName.size() <= 100 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() >= 5 && data.comment.size() <= 1000;
+    }
+
+    match /reviews/{reviewId} {
+      // Reviews are public so companies can see positive testimonials on the landing page
+      allow read: if true;
+      allow create: if isSignedIn() && isValidReview(request.resource.data) && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Admins Collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false; // System-only or pre-configured offline
+    }
+  }
+}
